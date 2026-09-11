@@ -1,43 +1,46 @@
-# eal-mcp-server.rs
+# Embedded Alerts MCP Server
 
-Canonical public repository for `embedded-alerts/eal-mcp-server.rs`.
+    Read-only MCP diagnostics for embedding rules, events, delivery, and acknowledgement contracts. The server is a Rust MCP process over stdio. Stdout is exclusively the JSON-RPC wire; structured diagnostics go to stderr and optional OTLP.
 
-The server currently implements newline-delimited JSON-RPC over stdio, negotiates MCP protocol revision `2025-06-18`, and exposes a read-only `zed_dependency_graph` tool. It never writes credentials, modifies repositories, or invokes application APIs.
+    ## Tools
 
-The product-neutral dependency-graph model, closed tool descriptor, validation, and text-plus-structured result are supplied by `ore-mcp-zed-graph`, pinned by full Git revision and committed `Cargo.lock`. Product package coordinates and repository policy remain local.
+    - `eal_fleet_map`
+- `eal_plan`
+- `eal_runtime_readiness`
+- `eal_shared_platform`
+- `eal_lifecycle_state`
+- `eal_safety_boundary`
 
-The official-`rmcp` lifecycle and final `2025-11-25` protocol migration are separate DEN-957 work and are not claimed complete by this repository-recovery change.
+    Every tool is read-only. Planning accepts a closed workload enum plus bounded numeric fields. The server has no arbitrary URL, command, filesystem, database, GitHub mutation, cluster mutation, or secret-value input.
 
-## Canonical Zed graph
+    ## Product topology
 
-- `embedded-alerts/eal-clients`
-- `embedded-alerts/eal-interfaces`
-- `embedded-alerts/eal-libs`
-- `embedded-alerts/eal-cli`
-- `embedded-alerts/eal-sync`
-- `shared-auth/shared-auth-clients`
+    - `eal-api` — rule and delivery-state API
+- `eal-interfaces` — embedding, rule, event, and transport contracts
+- `embedded-alerts-libs` — provider, evaluation, delivery, and policy libraries
+- `eal-sync` — offline-first alert and acknowledgement sync
+- `eal-infra` — Kubernetes and bounded Cloudflare edge infrastructure
 
-Packages materialize under `.vendor/.zed`.
+    ## Security boundary
 
-## Repository delivery
+    - The MCP surface never emits alerts, modifies rules, or acknowledges delivery.
+- Embedding inputs and alert payloads are excluded from tools and telemetry.
+- Provider readiness is presence-only and does not claim successful authentication.
 
-The repository is live on GitHub. The initial source history was published through the authenticated recovery lane tracked by DEN-2287 and DEN-2797. There is no local `publish.sh` step to run after cloning this repository.
+    The shared core is pinned at `c6101656c8227251d1dbd61df54f03a186b42ade`. It provides bounded MCP framing, explicit OTLP/gRPC traces, metrics and logs, JSON stderr diagnostics, redaction, low-cardinality tool metrics, and the formal runtime lifecycle. Each tool also owns an explicit span with `skip_all`; arguments and results are never recorded. Configuration readiness reports environment-variable presence only and performs no authentication or network request.
 
-Subsequent changes must use a focused feature branch and reviewed pull request. Do not rewrite the initial history, force-push shared refs, or place personal access tokens in Git configuration, source, workflow inputs, logs, issues, or pull requests.
+    This server contains no authenticated HTTP client. If a future tool adds one, it must use fixed or strictly validated HTTP(S) origins, reject credentials/query/fragment/private/metadata targets, disable redirects and ambient proxies, keep credentials in sensitive headers, cap every response, and add adversarial tests before merge.
 
-Exact recovery and rebase evidence, including the shared-graph base commit and the still-missing sibling E2E repository, is recorded in [`docs/recovery-delivery.md`](docs/recovery-delivery.md).
+    ## Shared platform knowledge
 
-## Validate
+    The bounded `shared_platform` tool documents ORE Kubernetes, shared definitions, dpm, Cloudflare/Squarespace, Supabase, and Fiducia without exposing a mutation or credential surface.
 
-```bash
-cargo metadata --locked --format-version 1 >/dev/null
-cargo fmt --all -- --check
-cargo clippy --locked --all-targets --all-features -- -D warnings
-cargo test --locked --all-targets --all-features
-```
+    ## Validate
 
-## Git submodules and Zed
-
-A composing monorepo may retain this repository as an exact committed gitlink. Zed remains authoritative for package identity and dependency intent. Adopt a canonical existing gitlink with `zed overtake --git-submodules`; do not create a second long-name coordinate, a duplicate workspace path, or an uncommitted submodule checkout.
-
-Tracking: `embedded-alerts/.github#4`, GitHub Project #1, DEN-2287, DEN-2797, DEN-957, and the `github.com/embedded-alerts` Linear project.
+    ```sh
+    cargo fmt --all -- --check
+    cargo clippy --locked --all-targets --all-features -- -D warnings
+    cargo test --locked --all-targets --all-features
+    cargo build --locked --release
+    cargo audit --deny warnings
+    ```

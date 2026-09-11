@@ -2,26 +2,30 @@
 org = "embedded-alerts"
 name = "eal-mcp-server"
 version = "0.1.0"
-description = "Read-only MCP server for the embedded-alerts organization"
+description = "Read-only MCP diagnostics for embedded alert and delivery contracts"
 license = "MIT"
+keywords = ["mcp", "alerts", "delivery", "diagnostics", "global-tool"]
 language = "rust"
 
 [package.repository]
 vcs = "git"
 url = "https://github.com/embedded-alerts/eal-mcp-server.rs"
 
-[install]
-dir = ".vendor/.zed"
+[build]
+command = "cargo build --release --locked --bin eal-mcp-server"
+outputs = ["target/release/eal-mcp-server"]
+
+[bin]
+eal-mcp-server = "target/release/eal-mcp-server"
 
 [publish]
 include_readme = true
 tag_format = "v{version}"
-exclude = ["target/**", ".vendor/**", ".zed/**", ".env", ".env.*", "*.log"]
+smoke_test = '''test -x "$ZED_PKG_TEST_TARGET/target/release/eal-mcp-server" && responses=$(printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2026-07-28","capabilities":{},"clientInfo":{"name":"zed-r2g","version":"1"}}}' '{"jsonrpc":"2.0","method":"notifications/initialized"}' '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}' | "$ZED_PKG_TEST_TARGET/target/release/eal-mcp-server") && printf '%s\n' "$responses" | grep -q '"tools"' '''
+exclude = [".env", ".env.*", ".direnv/**", ".zed/**", ".zed-pack/**", "target/**", "tmp/**", "**/*.log", ".DS_Store"]
 
-[dependencies]
-"embedded-alerts/eal-clients" = "^0.1.0"
-"embedded-alerts/eal-interfaces" = "^0.1.0"
-"embedded-alerts/eal-libs" = "^0.1.0"
-"embedded-alerts/eal-cli" = "^0.1.0"
-"embedded-alerts/eal-sync" = "^0.1.0"
-"shared-auth/shared-auth-clients" = "^0.1.0"
+[install]
+adapter = "none"
+
+[scripts]
+test = "cargo test --all-targets --all-features --locked"
