@@ -24,3 +24,6 @@
 tmp/temp/
 tmp/worktrees/
 # <<< ores fleet hygiene <<<
+# Local temporary directories and repository-owned worktrees
+tmp/
+temp/
