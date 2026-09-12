@@ -19,3 +19,8 @@
 !/env/enc/dev.env.enc
 !/env/enc/prod.env.enc
 # END ores-sops dotenv policy
+*.log
+# >>> ores fleet hygiene — managed block, edits below are overwritten >>>
+tmp/temp/
+tmp/worktrees/
+# <<< ores fleet hygiene <<<
